@@ -1,3 +1,31 @@
+use std::sync::RwLock;
+
+use windows_sys::{Win32::Foundation::*, Win32::System::Threading::*};
+
+static COUNTER: RwLock<i32> = RwLock::new(0);
+
 fn main() {
-    println!("Hello, world!");
+    unsafe {
+        let work = CreateThreadpoolWork(Some(callback), std::ptr::null_mut(), std::ptr::null_mut());
+
+        if work == 0 {
+            println!("{:?}", GetLastError());
+            return;
+        }
+
+        for _ in 0..10 {
+            SubmitThreadpoolWork(work);
+        }
+
+        WaitForThreadpoolWorkCallbacks(work, 0);
+        CloseThreadpoolWork(work);
+    }  
+
+    let counter = COUNTER.read().unwrap();
+    println!("counter: {}", *counter);
+}
+
+extern "system" fn callback(_: PTP_CALLBACK_INSTANCE, _: *mut std::ffi::c_void, _: PTP_WORK) {
+    let mut counter = COUNTER.write().unwrap(); 
+    *counter += 1;
 }
