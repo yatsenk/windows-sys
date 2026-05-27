@@ -2,7 +2,7 @@ use std::ffi::OsStr;
 use sysinfo::System;
 use itertools::Itertools;
 use windows_sys::Win32::{
-    Foundation::FALSE, 
+    Foundation::{FALSE, GetLastError}, 
     System::{
         Memory::{MEMORY_BASIC_INFORMATION, VirtualQueryEx}, 
         Threading::{OpenProcess, PROCESS_ALL_ACCESS}
@@ -24,25 +24,29 @@ fn main() {
         }
     };
 
-    unsafe {
-        let mut mbi = MEMORY_BASIC_INFORMATION::default();
+    let mut mbi = MEMORY_BASIC_INFORMATION::default();
 
-        let hprocess = OpenProcess(
+    let hprocess = unsafe {
+        OpenProcess(
             PROCESS_ALL_ACCESS, 
             FALSE, 
             pid
-        );
+        )
+    };
 
-        let result = VirtualQueryEx(
-            hprocess, 
-            std::ptr::null_mut(),  
-            &mut mbi, 
-            std::mem::size_of::<MEMORY_BASIC_INFORMATION>()
-        );
+    unsafe {
+        VirtualQueryEx(
+            hprocess,
+            std::ptr::null_mut(),
+            &mut mbi,
+            size_of::<MEMORY_BASIC_INFORMATION>(),
+        )
+    };
 
-        if !result == 0 {
-            println!("ACCESS");
-            println!("Base Address: {:?}", mbi.BaseAddress);
-        }
-    }
+    println!("[ACCESS]");
+    println!("Base Address: {:?}", mbi.BaseAddress);
+    println!("Region Size: {:?}", mbi.RegionSize);
+
+    let error = unsafe { GetLastError() };
+    println!("[LAST CODE ERROR]: {}", error);
 }
