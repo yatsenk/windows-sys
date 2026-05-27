@@ -8,4 +8,9 @@ version = "0.61.2"
 features = [
     "Win32_Foundation",
     "Win32_System_Threading",
+    "Win32_System_Memory",
 ]
+
+[dependencies]
+sysinfo = "0.39.2"
+itertools = "0.14.0"
