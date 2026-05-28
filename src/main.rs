@@ -1,8 +1,8 @@
-use std::ffi::OsStr;
+use std::ffi::{OsStr, c_void};
 use sysinfo::System;
 use itertools::Itertools;
 use windows_sys::Win32::{
-    Foundation::{FALSE, GetLastError}, 
+    Foundation::FALSE, 
     System::{
         Memory::{MEMORY_BASIC_INFORMATION, VirtualQueryEx}, 
         Threading::{OpenProcess, PROCESS_ALL_ACCESS}
@@ -10,8 +10,10 @@ use windows_sys::Win32::{
 };
 
 fn main() { 
-    let process_name = OsStr::new("explorer.exe");
     let system = System::new_all();
+    let mut mbi = MEMORY_BASIC_INFORMATION::default();
+    let process_name = OsStr::new("explorer.exe");
+
     let pid = match system.processes_by_exact_name(process_name).at_most_one() {
         Ok(Some(process)) => process.pid().as_u32(),
         Ok(None) => {
@@ -24,9 +26,9 @@ fn main() {
         }
     };
 
-    let mut mbi = MEMORY_BASIC_INFORMATION::default();
+    println!("[{pid}] {:?}", process_name);
 
-    let hprocess = unsafe {
+    let process_handle = unsafe {
         OpenProcess(
             PROCESS_ALL_ACCESS, 
             FALSE, 
@@ -34,19 +36,25 @@ fn main() {
         )
     };
 
-    unsafe {
+    let base_address: *const c_void = std::ptr::null_mut();
+    
+    println!("Base Address:       {:?}", base_address);
+    println!("\n---------- Begin Memory Search ----------");
+
+    let result = unsafe {
         VirtualQueryEx(
-            hprocess,
-            std::ptr::null_mut(),
+            process_handle,
+            base_address,
             &mut mbi,
             size_of::<MEMORY_BASIC_INFORMATION>(),
         )
     };
 
-    println!("[ACCESS]");
-    println!("Base Address: {:?}", mbi.BaseAddress);
-    println!("Region Size: {:?}", mbi.RegionSize);
+    while result != 0 {
+        let base_address = base_address.wrapping_add(mbi.RegionSize);
+        println!("Base Address:       {:?}", base_address);
+    }
 
-    let error = unsafe { GetLastError() };
-    println!("[LAST CODE ERROR]: {}", error);
+    println!("\n---------- End Memory Search ----------");
+    println!("Base Address:       {:?}", base_address);
 }
