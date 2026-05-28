@@ -12,49 +12,31 @@ use windows_sys::Win32::{
 fn main() { 
     let system = System::new_all();
     let mut mbi = MEMORY_BASIC_INFORMATION::default();
-    let process_name = OsStr::new("explorer.exe");
 
-    let pid = match system.processes_by_exact_name(process_name).at_most_one() {
-        Ok(Some(process)) => process.pid().as_u32(),
-        Ok(None) => {
-            println!("No process '{:?}' was found.", process_name);
-            std::process::exit(1);
+    println!("PID  |  Process Name  |  Virtual Address");
+    for (pid, process) in system.processes() {
+        let process_handle = unsafe {
+            OpenProcess(
+                PROCESS_ALL_ACCESS, 
+                FALSE, 
+                pid.as_u32()
+            )
+        };
+
+        let base_address: *const c_void = std::ptr::null_mut();
+
+        let result = unsafe {
+            VirtualQueryEx(
+                process_handle,
+                base_address,
+                &mut mbi,
+                size_of::<MEMORY_BASIC_INFORMATION>(),
+            )
+        };
+
+        if result != 0 {
+            let base_address = base_address.wrapping_add(mbi.RegionSize);
+            print!("[{}] {:?} {:?}\n", pid, process.name(), base_address);
         }
-        Err(_) => {
-            println!("More than one process '{:?}' was found.", process_name);
-            std::process::exit(1);
-        }
-    };
-
-    println!("[{pid}] {:?}", process_name);
-
-    let process_handle = unsafe {
-        OpenProcess(
-            PROCESS_ALL_ACCESS, 
-            FALSE, 
-            pid
-        )
-    };
-
-    let base_address: *const c_void = std::ptr::null_mut();
-    
-    println!("Base Address:       {:?}", base_address);
-    println!("\n---------- Begin Memory Search ----------");
-
-    let result = unsafe {
-        VirtualQueryEx(
-            process_handle,
-            base_address,
-            &mut mbi,
-            size_of::<MEMORY_BASIC_INFORMATION>(),
-        )
-    };
-
-    while result != 0 {
-        let base_address = base_address.wrapping_add(mbi.RegionSize);
-        println!("Base Address:       {:?}", base_address);
     }
-
-    println!("\n---------- End Memory Search ----------");
-    println!("Base Address:       {:?}", base_address);
 }
