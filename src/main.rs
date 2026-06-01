@@ -5,11 +5,15 @@ use windows_sys::Win32::{
     Foundation::{CloseHandle, FALSE}, 
     System::{
         Memory::{MEMORY_BASIC_INFORMATION, VirtualQueryEx}, 
-        Threading::{OpenProcess, PROCESS_ALL_ACCESS}
+        Threading::{OpenProcess, PROCESS_QUERY_INFORMATION}
     }
 };
 
 fn main() { 
+    get_all_virtual_addresses();
+}
+
+fn get_all_virtual_addresses() {
     let system = System::new_all();
     let process_name = OsStr::new("explorer.exe");
     let pid = match system.processes_by_exact_name(process_name).at_most_one() {
@@ -26,7 +30,7 @@ fn main() {
 
     let process_handle = unsafe {
         OpenProcess(
-            PROCESS_ALL_ACCESS, 
+            PROCESS_QUERY_INFORMATION, 
             FALSE, 
             pid
         )
