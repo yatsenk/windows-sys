@@ -39,7 +39,7 @@ fn get_all_virtual_addresses() {
     let mut mbi = MEMORY_BASIC_INFORMATION::default();
 
     if process_handle != std::ptr::null_mut() {
-        let mut base_address: *const c_void = std::ptr::null_mut();
+        let mut base_address: *const c_void = std::ptr::null();
 
         loop {
             let result = unsafe {
