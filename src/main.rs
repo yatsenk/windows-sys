@@ -28,6 +28,8 @@ fn get_all_virtual_addresses() {
         }
     };
 
+    println!("[{}], {:?}", pid, process_name);
+
     let process_handle = unsafe {
         OpenProcess(
             PROCESS_QUERY_INFORMATION, 
@@ -53,7 +55,13 @@ fn get_all_virtual_addresses() {
 
             if result == 0 { break; }
             
-            print!("[{}] {:?} {:?}\n", pid, process_name, base_address);
+            println!(
+                "Virtual Address: {:?}\nProtect: {}\nPage Type: {:?}\n", 
+                mbi.BaseAddress, 
+                mbi.Protect,
+                mbi.Type
+            );
+
             base_address = base_address.wrapping_add(mbi.RegionSize);
         }
         
